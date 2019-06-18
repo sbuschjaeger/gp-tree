@@ -1,0 +1,4 @@
+[submodule "submodules/ensembles"]
+	path = submodules/ensembles
+	url = git@bitbucket.org:sbuschjaeger/ensembles.git
+	branch = ensembles-classification
