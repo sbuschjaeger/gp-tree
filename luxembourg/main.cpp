@@ -194,20 +194,19 @@ int main(int argc, char const* argv[]) {
 	Dataset<double, double, REGRESSION> D(&_X[0], &_Y[0], _Y.size(), dim);
 	bool print_header = true;
 
-	for (auto l1 : {0.1,0.5,1.0,1.5,2.0}) {
-		for (auto l2 : {0.1,0.5,1.0,1.5,2.0}) {
+	for (auto l1 : {1.0,2.0,5.0}) {
+		for (auto l2 : {1.0,2.0,5.0}) {
 			double kparam[2] = {l1,l2};
 			ARDKernel<double,double> k(kparam, dim);
 			//DotKernel<double, double> k;
-			for (auto p : {50, 100, 200}) { //
-				testModel(
-					[p,&k]() {return new GaussianProcess<double, double, REGRESSION>(p, 0.1, k);},
-					D,
-					"GP(" + std::to_string(l1) + "," + std::to_string(l2) + "," + std::to_string(p) + ")",
-					print_header,
-					5
-				);
-				print_header = false;
+			for (auto p : {200,500}) {
+//				testModel(
+//					[p,&k]() {return new GaussianProcess<double, double, REGRESSION>(p, 0.1, k);},
+//					D,
+//					"GP(" + std::to_string(l1) + "," + std::to_string(l2) + "," + std::to_string(p) + ")",
+//					print_header,
+//					5
+//				);
 
 				testModel(
 					[p,&k]() -> BatchLearner<double, double, REGRESSION>* {return new InformativeVectorMachine<double, double, REGRESSION>(p, 0.1, k);},
@@ -216,14 +215,14 @@ int main(int argc, char const* argv[]) {
 					print_header,
 					5
 				);
-
-				testModel(
-					[p,&k]() -> BatchLearner<double, double, REGRESSION>* {return new GaussianModelTree<double, double, REGRESSION>(50, p, 0, 0.1, k);},
-					D,
-					"GMT(" + std::to_string(l1) + "," + std::to_string(l2) + "," + std::to_string(p) + ")",
-					print_header,
-					5
-				);
+				print_header = false;
+//				testModel(
+//					[p,&k]() -> BatchLearner<double, double, REGRESSION>* {return new GaussianModelTree<double, double, REGRESSION>(50, p, 0, 0.1, k);},
+//					D,
+//					"GMT(" + std::to_string(l1) + "," + std::to_string(l2) + "," + std::to_string(p) + ")",
+//					print_header,
+//					5
+//				);
 			}
         }
     }
