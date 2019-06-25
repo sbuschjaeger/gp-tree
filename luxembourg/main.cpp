@@ -13,8 +13,10 @@
 #include "InformativeVectorMachine.h"
 #include "GaussianModelTree.h"
 
+using internal_t = float;
+
 template <typename T>
-T var(std::vector<Dataset<double,T,REGRESSION>> const &splits, size_t fold) {
+T var(std::vector<Dataset<internal_t,T,internal_t>> const &splits, size_t fold) {
 	T mean = 0;
 	size_t cnt = 0;
 	for (size_t j = 0; j < splits.size(); ++j) {
@@ -40,23 +42,23 @@ T var(std::vector<Dataset<double,T,REGRESSION>> const &splits, size_t fold) {
 }
 
 void testModel(
-		std::function<BatchLearner<double, double, REGRESSION> *()> createModel,
-		Dataset<double, double, REGRESSION> D, std::string const &model_name,
+		std::function<BatchLearner<internal_t, internal_t, internal_t> *()> createModel,
+		Dataset<internal_t, internal_t, internal_t> D, std::string const &model_name,
 		bool with_header = false, size_t folds = 5) {
-	std::vector<Dataset<double,double,REGRESSION>> splits = D.k_fold(folds);
+	std::vector<Dataset<internal_t,internal_t,internal_t>> splits = D.k_fold(folds);
 
-	std::vector<double> error(folds, 0.0);
+	std::vector<internal_t> error(folds, 0.0);
 	for (size_t i = 0; i < folds; ++i) {
-		BatchLearner<double, double, REGRESSION> *model = createModel();
+		BatchLearner<internal_t, internal_t, internal_t> *model = createModel();
 		bool fitted = model->fit(splits[i]);
 		if (!fitted) {
-			error[i] = std::numeric_limits<double>::quiet_NaN();
+			error[i] = std::numeric_limits<internal_t>::quiet_NaN();
 		} else {
-			double variance = var(splits, i);
+			internal_t variance = var(splits, i);
 
 			for (size_t j = 0; j < folds; ++j) {
 				if (i != j) {
-					error[i] += model->error(splits[j], [variance](std::vector<double> const &pred, double label) -> double {
+					error[i] += model->error(splits[j], [variance](std::vector<internal_t> const &pred, internal_t label) -> internal_t {
 						return (pred[0]-label)*(pred[0]-label)/variance;
 					});
 				}
@@ -66,13 +68,13 @@ void testModel(
 		}
 	}
 
-	double smse = std::accumulate(error.begin(), error.end(), 0.0) / error.size();
+	internal_t smse = std::accumulate(error.begin(), error.end(), 0.0) / error.size();
     
-	double var = 0.0;
-	std::for_each (error.begin(), error.end(), [&](const double e) {
-        var += (e - smse) * (e - smse);
+	internal_t xval_var = 0.0;
+	std::for_each (error.begin(), error.end(), [&](const internal_t e) {
+        xval_var += (e - smse) * (e - smse);
     });
-    var /= error.size();
+    xval_var /= error.size();
 
 	std::stringstream ss;
 	ss << "\"" << model_name << "\"";
@@ -90,11 +92,11 @@ void testModel(
 	}
 
 	Logger::log("xval", ss.str());
-	std::cout << model_name << " SMSE is: " << smse << " +/-" << var << std::endl;
-//	std::cout << "SMSE is: " << error / (static_cast<float>(NTest)*var<float>(YTest,NTest)) << std::endl << std::endl;
+	std::cout << model_name << " SMSE is: " << smse << " +/-" << xval_var << std::endl;
+//	std::cout << "SMSE is: " << error / (static_cast<internal_t>(NTest)*var<internal_t>(YTest,NTest)) << std::endl << std::endl;
 }
 
-void readCSV(std::string const &path, std::vector<double> &X, std::vector<double> &Y) {
+void readCSV(std::string const &path, std::vector<size_t> &coords, std::vector<internal_t> &density) {
 	if (!file_exists(path)) {
 		throw std::runtime_error("File does not exist: " + path);
 	}
@@ -113,9 +115,9 @@ void readCSV(std::string const &path, std::vector<double> &X, std::vector<double
 
 			while (getline(ss, entry, ',')) {
 				if (i == 0 || i == 1) {
-					X.push_back(static_cast<double>(atof(entry.c_str())));
+					coords.push_back(static_cast<size_t>(atof(entry.c_str())*100.0));
 				} else if (i == 2) {
-					Y.push_back(static_cast<double>(atof(entry.c_str())));
+					density.push_back(static_cast<internal_t>(atof(entry.c_str())));
 				} else {
 					break;
 				}
@@ -128,19 +130,69 @@ void readCSV(std::string const &path, std::vector<double> &X, std::vector<double
 
 int main(int argc, char const* argv[]) {
     std::cout << "Reading files" << std::endl;
-	std::vector<double> XVec;
-	std::vector<double> YVec;
+	std::vector<size_t> coords;
+	std::vector<internal_t> density;
     auto pathToData = "../data.csv";
-	readCSV(pathToData, XVec, YVec);
+	readCSV(pathToData, coords, density);
 
-	size_t N = YVec.size();
 	size_t dim = 2;
-	double * X = &XVec[0];
-	double * Y = &YVec[0];
 
     std::cout << "=== DATA READ ===" << std::endl;
-	std::cout << "N = " << N << std::endl;
-	std::cout << "dim = " << dim << std::endl;
+//	std::cout << "RAW N = " << counts.size() << std::endl;
+//	std::cout << "dim = " << dim << std::endl;
+//	for (unsigned int i = 0;i < counts.size(); ++i) {
+//		for (unsigned int j = 0; j < dim; ++j) {
+//			std::cout << coords[i*dim+j] << " ";
+//		}
+//		std::cout << "- " << counts[i] << std::endl;
+//	}
+//    std::cout << "======" << std::endl << std::endl;
+	std::map<size_t, std::map<size_t, std::vector<internal_t>>> coord_map;
+
+	for (size_t i = 0; i < density.size(); ++i) {
+		size_t c1 = coords[i*dim + 0];
+		size_t c2 = coords[i*dim + 1];
+        if (!coord_map.count(c1)) {
+			coord_map[c1] = std::map<size_t, std::vector<internal_t>>();
+        }
+        if (!coord_map[c1].count(c2)) {
+			coord_map[c1][c2] = std::vector<internal_t>();
+        }
+		coord_map[c1][c2].push_back(density[i]);
+    }
+
+	std::vector<internal_t> X;
+	std::vector<internal_t> Y;
+
+    for (auto& [c1, inner_map]: coord_map) {
+        for (auto& [c2, value]: inner_map) {
+			X.push_back(c1);
+			X.push_back(c2);
+            
+			internal_t mean = 0;
+            for (auto e : value) {
+                mean += e;
+            }
+			Y.push_back(mean / value.size());
+			//std::cout << "value.size() = " << value.size() << std::endl;
+        }
+    }
+
+	size_t N = Y.size();
+//	std::cout << "Y.size() = " << Y.size() << std::endl;
+//	std::cout << "X.size() = " << X.size() << std::endl;
+//	std::cout << "=== DATA PROCESSED ===" << std::endl;
+//	for (unsigned int i = 0;i < N; ++i) {
+//		for (unsigned int j = 0; j < dim; ++j) {
+//			std::cout << X[i*dim+j] << " ";
+//		}
+//		std::cout << "- " << Y[i] << std::endl;
+//	}
+//	std::cout << "======" << std::endl << std::endl;
+
+	normalize<internal_t>(&X[0], N, dim);
+
+	std::cout << "=== DATA NORMALIZED ===" << std::endl;
 	for (unsigned int i = 0;i < 10; ++i) {
 		for (unsigned int j = 0; j < dim; ++j) {
 			std::cout << X[i*dim+j] << " ";
@@ -148,85 +200,45 @@ int main(int argc, char const* argv[]) {
 		std::cout << "- " << Y[i] << std::endl;
 	}
     std::cout << "======" << std::endl << std::endl;
-	std::map<double, std::map<double, std::vector<double>>> coord_map;
 
-    for (size_t i = 0; i < N; ++i) {
-		double c1 = X[i*dim + 0];
-		double c2 = X[i*dim + 1];
-        if (!coord_map.count(c1)) {
-			coord_map[c1] = std::map<double, std::vector<double>>();
-        }
-        if (!coord_map[c1].count(c2)) {
-			coord_map[c1][c2] = std::vector<double>();
-        }
-        coord_map[c1][c2].push_back(Y[i]);
-    }
-
-	std::vector<double> _X;
-	std::vector<double> _Y;
-
-    for (auto& [c1, inner_map]: coord_map) {
-        for (auto& [c2, value]: inner_map) {
-            _X.push_back(c1);
-            _X.push_back(c2);
-            
-			double mean = 0;
-            for (auto e : value) {
-                mean += e;
-            }
-            _Y.push_back(mean / value.size());
-        }
-    }
-
-	normalize<double>(&_X[0], _X.size(), dim);
-
-    std::cout << "=== DATA AGGREGATED ===" << std::endl;
-	std::cout << "N = " << _Y.size() << std::endl;
-	std::cout << "dim = " << dim << std::endl;
-	for (unsigned int i = 0;i < _Y.size(); ++i) {
-		for (unsigned int j = 0; j < dim; ++j) {
-			std::cout << _X[i*dim+j] << " ";
-		}
-		std::cout << "- " << _Y[i] << std::endl;
-	}
-	return 1;
-    std::cout << "======" << std::endl << std::endl;
-
-	Dataset<double, double, REGRESSION> D(&_X[0], &_Y[0], _Y.size(), dim);
+	Dataset<internal_t, internal_t, internal_t> D(&X[0], &Y[0], N, dim);
 	bool print_header = true;
 
-	for (auto l1 : {1.0,2.0,5.0}) {
-		for (auto l2 : {1.0,2.0,5.0}) {
-			double kparam[2] = {l1,l2};
-			ARDKernel<double,double> k(kparam, dim);
-			//DotKernel<double, double> k;
-			for (auto p : {500,1000}) {
-				testModel(
-					[p,&k]() {return new GaussianProcess<double, double, REGRESSION>(p, 0.1, k);},
-					D,
-					"GP(" + std::to_string(l1) + "," + std::to_string(l2) + "," + std::to_string(p) + ")",
-					print_header,
-					5
-				);
-
-//				testModel(
-//					[p,&k]() -> BatchLearner<double, double, REGRESSION>* {return new InformativeVectorMachine<double, double, REGRESSION>(p, 0.1, k);},
-//					D,
-//					"IVM(" + std::to_string(l1) + "," + std::to_string(l2) + "," + std::to_string(p) + ")",
-//					print_header,
-//					5
-//				);
-				print_header = false;
-//				testModel(
-//					[p,&k]() -> BatchLearner<double, double, REGRESSION>* {return new GaussianModelTree<double, double, REGRESSION>(50, p, 0, 0.1, k);},
-//					D,
-//					"GMT(" + std::to_string(l1) + "," + std::to_string(l2) + "," + std::to_string(p) + ")",
-//					print_header,
-//					5
-//				);
+	for (auto eps : {0.01, 0.05, 0.1, 0.5}) {
+		for (auto l1 : {1.0,2.0,5.0}) {
+			for (auto l2 : {1.0,2.0,5.0}) {
+				internal_t kparam[2] = {l1,l2};
+				ARDKernel<internal_t,internal_t> k(kparam, dim);
+				//DotKernel<internal_t, internal_t> k;
+				for (auto p : {200,500,1000,2000}) {
+					testModel(
+						[p,eps,&k]() {return new GaussianProcess<internal_t, internal_t, internal_t>(p, eps, k);},
+						D,
+						"GP(" + std::to_string(p) + "," + std::to_string(eps) + "," + std::to_string(l1) + "," + std::to_string(l2) + ")",
+						print_header,
+						5
+					);
+					print_header = false;
+				}
+				for (auto p : {200,500}) {
+					testModel(
+						[p,eps,&k]() -> BatchLearner<internal_t, internal_t, internal_t>* {return new InformativeVectorMachine<internal_t, internal_t, internal_t>(p, eps, k);},
+						D,
+						"IVM(" + std::to_string(p) + "," + std::to_string(eps) + "," + std::to_string(l1) + "," + std::to_string(l2) + ")",
+						print_header,
+						5
+					);
+	//				testModel(
+	//					[p,&k]() -> BatchLearner<internal_t, internal_t, internal_t>* {return new GaussianModelTree<internal_t, internal_t, internal_t>(50, p, 0, 0.1, k);},
+	//					D,
+	//					"GMT(" + std::to_string(l1) + "," + std::to_string(l2) + "," + std::to_string(p) + ")",
+	//					print_header,
+	//					5
+	//				);
+				}
 			}
-        }
-    }
+		}
+	}
 
     /*
     std::vector<std::vector<unsigned int> > train;
@@ -234,7 +246,7 @@ int main(int argc, char const* argv[]) {
 
     unsigned int const XVAL = 5;
     xval(XVAL, X.size(), train, test);
-    std::vector<float> epsilons = { 1e-5, 0.001, 0.1, 1, 2, 5 };
+    std::vector<internal_t> epsilons = { 1e-5, 0.001, 0.1, 1, 2, 5 };
     std::vector<unsigned int> Ks = { 50, 200 };
     std::vector<unsigned int> optIter = { 0, 25 };
 
@@ -245,13 +257,13 @@ int main(int argc, char const* argv[]) {
     for (auto K : Ks) {
         for (auto epsilon : epsilons) {
             for (auto iter : optIter) {
-                float avgSMSE = 0.0f;
-                float avgRMSE = 0.0f;
+                internal_t avgSMSE = 0.0f;
+                internal_t avgRMSE = 0.0f;
                 for (unsigned int i = 0; i < XVAL; ++i) {
-                    std::vector<std::vector<float> > XTrain;
-                    std::vector<float> YTrain;
-                    std::vector<std::vector<float> > XTest;
-                    std::vector<float> YTest;
+                    std::vector<std::vector<internal_t> > XTrain;
+                    std::vector<internal_t> YTrain;
+                    std::vector<std::vector<internal_t> > XTest;
+                    std::vector<internal_t> YTest;
 
                     for (auto j : train[i]) {
                         XTrain.push_back(X[j]);
@@ -262,8 +274,8 @@ int main(int argc, char const* argv[]) {
                         XTest.push_back(X[j]);
                         YTest.push_back(Y[j]);
                     }
-                    std::vector<float> min;
-                    std::vector<float> max;
+                    std::vector<internal_t> min;
+                    std::vector<internal_t> max;
                     minMaxData(XTrain, min, max);
                     normalizeData(XTrain, min, max);
                     normalizeData(XTest, min, max);
@@ -291,8 +303,8 @@ int main(int argc, char const* argv[]) {
                     avgRMSE += exp.rmse;
                     avgSMSE += exp.smse;
                     getch();
-                    float mseBaseline = 0.0;
-                    float baseline = mean(YTrain);
+                    internal_t mseBaseline = 0.0;
+                    internal_t baseline = mean(YTrain);
 
                     // For reference
                     for (unsigned int i = 0; i < XTest.size(); ++i) {
