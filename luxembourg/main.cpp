@@ -16,26 +16,18 @@
 using internal_t = float;
 
 template <typename T>
-T var(std::vector<Dataset<internal_t,T,internal_t>> const &splits, size_t fold) {
+T var(Dataset<internal_t,T,internal_t> const &D) {
 	T mean = 0;
 	size_t cnt = 0;
-	for (size_t j = 0; j < splits.size(); ++j) {
-		if (fold != j) {
-			for (size_t i = 0; i < splits[j].size(); ++i) {
-				mean += splits[j][i].label;
-				++cnt;
-			}
-		}
+	for (size_t i = 0; i < D.size(); ++i) {
+		mean += D[i].label;
+		++cnt;
 	}
 	mean /= cnt;
 
 	T sum2 = 0;
-	for (size_t j = 0; j < splits.size(); ++j) {
-		if (fold != j) {
-			for (size_t i = 0; i < splits[j].size(); ++i) {
-				sum2 += (splits[j][i].label-mean)*(splits[j][i].label-mean);
-			}
-		}
+	for (size_t i = 0; i < D.size(); ++i) {
+		sum2 += (D[i].label-mean)*(D[i].label-mean);
 	}
 
 	return sum2/cnt;
@@ -50,20 +42,17 @@ void testModel(
 	std::vector<internal_t> error(folds, 0.0);
 	for (size_t i = 0; i < folds; ++i) {
 		BatchLearner<internal_t, internal_t, internal_t> *model = createModel();
-		bool fitted = model->fit(splits[i]);
+		Dataset<internal_t,internal_t,internal_t> DTrain(splits, i);
+
+		bool fitted = model->fit(DTrain);
 		if (!fitted) {
 			error[i] = std::numeric_limits<internal_t>::quiet_NaN();
 		} else {
-			internal_t variance = var(splits, i);
+			internal_t variance = var(splits[i]);
 
-			for (size_t j = 0; j < folds; ++j) {
-				if (i != j) {
-					error[i] += model->error(splits[j], [variance](std::vector<internal_t> const &pred, internal_t label) -> internal_t {
-						return (pred[0]-label)*(pred[0]-label)/variance;
-					});
-				}
-			}
-			error[i] /= (folds - 1);
+			error[i] = model->error(splits[i], [variance](std::vector<internal_t> const &pred, internal_t label) -> internal_t {
+				return (pred[0]-label)*(pred[0]-label)/variance;
+			});
 			delete model;
 		}
 	}
@@ -115,7 +104,7 @@ void readCSV(std::string const &path, std::vector<size_t> &coords, std::vector<i
 
 			while (getline(ss, entry, ',')) {
 				if (i == 0 || i == 1) {
-					coords.push_back(static_cast<size_t>(atof(entry.c_str())*100.0));
+					coords.push_back(static_cast<size_t>(static_cast<float>(atof(entry.c_str()))*100.0f));
 				} else if (i == 2) {
 					density.push_back(static_cast<internal_t>(atof(entry.c_str())));
 				} else {
@@ -193,7 +182,7 @@ int main(int argc, char const* argv[]) {
 	normalize<internal_t>(&X[0], N, dim);
 
 	std::cout << "=== DATA NORMALIZED ===" << std::endl;
-	for (unsigned int i = 0;i < 10; ++i) {
+	for (unsigned int i = 0;i < N; ++i) {
 		for (unsigned int j = 0; j < dim; ++j) {
 			std::cout << X[i*dim+j] << " ";
 		}
@@ -203,38 +192,43 @@ int main(int argc, char const* argv[]) {
 
 	Dataset<internal_t, internal_t, internal_t> D(&X[0], &Y[0], N, dim);
 	bool print_header = true;
+	const size_t xval_runs = 5;
 
 	for (auto eps : {0.01, 0.05, 0.1, 0.5}) {
-		for (auto l1 : {1.0,2.0,5.0}) {
-			for (auto l2 : {1.0,2.0,5.0}) {
-				internal_t kparam[2] = {l1,l2};
+		for (auto l1 : {0.5,1.0,2.0,5.0}) {
+			for (auto l2 : {0.5, 1.0,2.0,5.0}) {
+				internal_t kparam[2] = {static_cast<internal_t>(l1),static_cast<internal_t>(l2)};
 				ARDKernel<internal_t,internal_t> k(kparam, dim);
 				//DotKernel<internal_t, internal_t> k;
-				for (auto p : {200,500,1000,2000}) {
-					testModel(
-						[p,eps,&k]() {return new GaussianProcess<internal_t, internal_t, internal_t>(p, eps, k);},
-						D,
-						"GP(" + std::to_string(p) + "," + std::to_string(eps) + "," + std::to_string(l1) + "," + std::to_string(l2) + ")",
-						print_header,
-						5
-					);
-					print_header = false;
-				}
-				for (auto p : {200,500}) {
-					testModel(
-						[p,eps,&k]() -> BatchLearner<internal_t, internal_t, internal_t>* {return new InformativeVectorMachine<internal_t, internal_t, internal_t>(p, eps, k);},
-						D,
-						"IVM(" + std::to_string(p) + "," + std::to_string(eps) + "," + std::to_string(l1) + "," + std::to_string(l2) + ")",
-						print_header,
-						5
-					);
-	//				testModel(
-	//					[p,&k]() -> BatchLearner<internal_t, internal_t, internal_t>* {return new GaussianModelTree<internal_t, internal_t, internal_t>(50, p, 0, 0.1, k);},
-	//					D,
-	//					"GMT(" + std::to_string(l1) + "," + std::to_string(l2) + "," + std::to_string(p) + ")",
-	//					print_header,
-	//					5
-	//				);
+//				for (auto p : {200, 500, 1000}) {
+//					testModel(
+//						[p,eps,&k]() {return new GaussianProcess<internal_t, internal_t, internal_t>(p, eps, k);},
+//						D,
+//						"GP(" + std::to_string(p) + "," + std::to_string(eps) + "," + std::to_string(l1) + "," + std::to_string(l2) + ")",
+//						print_header,
+//						xval_runs
+//					);
+//					print_header = false;
+//				}
+//				for (auto p : {50, 100, 200}) {
+//					testModel(
+//						[p,eps,&k]() -> BatchLearner<internal_t, internal_t, internal_t>* {return new InformativeVectorMachine<internal_t, internal_t, internal_t>(p, eps, k);},
+//						D,
+//						"IVM(" + std::to_string(p) + "," + std::to_string(eps) + "," + std::to_string(l1) + "," + std::to_string(l2) + ")",
+//						print_header,
+//						xval_runs
+//					);
+//				}
+				for (auto split_points: {50, 100, 200}) {
+					for (auto gp_points : {500, 1000}) {
+						testModel(
+							[split_points, gp_points, eps, &k]() -> BatchLearner<internal_t, internal_t, internal_t>* {return new GaussianModelTree<internal_t, internal_t, internal_t>(split_points, gp_points, 0, eps, k);},
+							D,
+							"GMT(" + std::to_string(split_points) + "," + std::to_string(gp_points) + "," + std::to_string(eps) + "," + std::to_string(l1) + "," + std::to_string(l2) + ")",
+							print_header,
+							xval_runs
+						);
+					}
 				}
 			}
 		}

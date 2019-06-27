@@ -15,9 +15,11 @@ set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} ")
 #SET(CMAKE_SHARED_LINKER_FLAGS "${CMAKE_SHARED_LINKER_FLAGS} -pg")
 
 # Specify options
-option(USE_NATIVE "Compile with [march|mtune]=native.   " ON)
-option(USE_OPENMP "Build with OpenMP Support.           " ON)
-option(USE_MKL "Build with Intel MKL Support.           " ON)
+option(USE_NATIVE "Compile with [march|mtune]=native.   " OFF)
+option(USE_OPENMP "Build with OpenMP Support.           " OFF)
+option(USE_MKL "Build with Intel MKL Support.           " OFF)
+
+message(" --CMAKE_CXX_FLAGS_RELEASE is ${CMAKE_CXX_FLAGS_RELEASE}")
 
 # For docker
 if (USE_NATIVE)
