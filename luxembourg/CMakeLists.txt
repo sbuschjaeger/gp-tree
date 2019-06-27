@@ -87,3 +87,8 @@ add_executable(main
         main.cpp ${SRC_CC} ${SRC_C} ${SRC_H}
 )
 target_include_directories(main PRIVATE ${INCLUDE_DIR})
+
+#add_executable(main_online
+#	    main_online.cpp ${SRC_CC} ${SRC_C} ${SRC_H}
+#)
+#target_include_directories(main_online PRIVATE ${INCLUDE_DIR})
