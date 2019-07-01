@@ -16,6 +16,90 @@
 
 using internal_t = float;
 
+#ifdef USE_TORCH
+#include "TorchWrapper.h"
+
+class Net : public TorchNet<internal_t, internal_t, internal_t> {
+public:
+	Net(size_t dim)
+		: fc1(dim, 5), fc2(5, 1) {
+		register_module("fc1", fc1);
+		register_module("fc2", fc2);
+	}
+
+	size_t size() const {
+		return 0;
+	}
+
+	std::string str() const {
+		return "FCNN(dim->5->1)";
+	}
+
+	torch::Tensor predict(torch::Tensor x) {
+		x = torch::relu(fc1->forward(x));
+		x = fc2->forward(x);
+		return x;
+	}
+
+	bool fit(TorchDataset<internal_t, internal_t, internal_t> &D) {
+		torch::Device device(torch::kCPU);
+		this->to(device);
+		float const lr = 0.01f;
+		float const mom = 0.0f;
+		unsigned int const bSize = 32;
+		torch::optim::SGD optimizer(parameters(), torch::optim::SGDOptions(lr).momentum(mom));
+		auto tmp = D.map(torch::data::transforms::Stack<>());
+		auto train_loader =
+				torch::data::make_data_loader<torch::data::samplers::SequentialSampler>(std::move(tmp), bSize);
+		for (size_t i = 0; i < 50; ++i) {
+			float mean_loss = 0;
+			size_t batch_cnt = 0;
+			for (auto &batch : *train_loader) {
+				auto examples = batch.data.to(device);
+				auto targets = batch.target.slice(1, 0, 1, 1); // dim, start, end, step
+				auto weights = batch.target.slice(1, 1, 2, 1);
+//				std::cout << "original_targets = " << batch.target << std::endl;
+				//std::cout << "targets = " << targets << std::endl;
+				//std::cout << "examples = " << examples << std::endl;
+//				std::cout << "weights = " << weights << std::endl;
+				try {
+					//batch.data()
+					targets = targets.to(device);
+					weights = weights .to(device);
+
+					optimizer.zero_grad();
+					//std::cout << data << std::endl;
+					auto output = predict(examples);
+					//std::cout << "output = " << output << std::endl;
+					//auto loss = torch::binary_cross_entropy(output, targets);
+					auto loss = torch::mse_loss(output, targets);
+					//loss = (loss * weights  / weights .sum()).sum();
+					//loss = loss.mean();
+
+					loss.backward(); // TODO MAYBE NORMALIZE HERE
+					//std::cout << "loss = " << loss << std::endl;
+					mean_loss += loss.template item<float>();
+					batch_cnt++;
+					optimizer.step();
+				} catch (std::runtime_error &e) {
+					std::cout << "error was " << e.what() << std::endl;
+					std::cout << "targets " << targets << std::endl;
+					std::cout << "weights " << weights << std::endl;
+					return false;
+				}
+			}
+//			std::cout << "loss: " << mean_loss / batch_cnt << std::endl;
+		}
+		return true;
+	}
+
+	torch::nn::Linear fc1;
+	torch::nn::Linear fc2;
+};
+
+
+#endif
+
 template <typename T>
 T var(Dataset<internal_t,T,internal_t> const &D) {
 	T mean = 0;
@@ -64,6 +148,7 @@ void test_model(
 		} else {
 			internal_t variance = var(splits[i]);
 
+			std::cout << "TESTING MODEL" << std::endl;
 			error[i] = model->error(splits[i], [variance](std::vector<internal_t> const &pred, internal_t label) -> internal_t {
 				return (pred[0]-label)*(pred[0]-label)/variance;
 			});
@@ -165,62 +250,89 @@ void test_all_models(Dataset<internal_t, internal_t, internal_t> D,
 					 bool with_header = false,
 					 size_t folds = 5) {
 
-	for (auto eps : {0.01,0.05, 0.1, 0.5}) {
-		for (auto p : {200, 500, 1000}) {
-			test_model(
-				[p,eps,&k]() {return new GaussianProcess<internal_t, internal_t, internal_t>(p, eps, k);},
-				D,
-				{
-					std::make_pair("name","GP"),
-					std::make_pair("kernel",kname),
-					std::make_pair("eps",std::to_string(eps)),
-					std::make_pair("k_l1",k_l1),
-					std::make_pair("k_l2",k_l2),
-					std::make_pair("gp_points",std::to_string(p)),
-					std::make_pair("ivm_points","None"),
-				},
-				with_header,
-				folds
-			);
-			with_header = false;
-		}
+	for (auto eps : {0.05, 0.1}) {
+//		for (auto p : {200, 500, 1000}) {
+//			test_model(
+//				[p,eps,&k]() {return new GaussianProcess<internal_t, internal_t, internal_t>(p, eps, k);},
+//				D,
+//				{
+//					std::make_pair("name","GP"),
+//					std::make_pair("kernel",kname),
+//					std::make_pair("eps",std::to_string(eps)),
+//					std::make_pair("k_l1",k_l1),
+//					std::make_pair("k_l2",k_l2),
+//					std::make_pair("gp_points",std::to_string(p)),
+//					std::make_pair("ivm_points","None"),
+//				},
+//				with_header,
+//				folds
+//			);
+//			with_header = false;
+//		}
 
-		for (auto p : {50, 100, 200}) {
-			test_model(
-				[p,eps,&k]() -> BatchLearner<internal_t, internal_t, internal_t>* {return new InformativeVectorMachine<internal_t, internal_t, internal_t>(p, eps, k);},
-				D,
-				{
-					std::make_pair("name","IVM"),
-					std::make_pair("kernel",kname),
-					std::make_pair("eps",std::to_string(eps)),
-					std::make_pair("k_l1",k_l1),
-					std::make_pair("k_l2",k_l2),
-					std::make_pair("gp_points","None"),
-					std::make_pair("ivm_points",std::to_string(p)),
-				},
-				with_header,
-				folds
-			);
-		}
+//		for (auto p : {50, 100, 200}) {
+//			test_model(
+//				[p,eps,&k]() -> BatchLearner<internal_t, internal_t, internal_t>* {return new InformativeVectorMachine<internal_t, internal_t, internal_t>(p, eps, k);},
+//				D,
+//				{
+//					std::make_pair("name","IVM"),
+//					std::make_pair("kernel",kname),
+//					std::make_pair("eps",std::to_string(eps)),
+//					std::make_pair("k_l1",k_l1),
+//					std::make_pair("k_l2",k_l2),
+//					std::make_pair("gp_points","None"),
+//					std::make_pair("ivm_points",std::to_string(p)),
+//				},
+//				with_header,
+//				folds
+//			);
+//		}
 
 		for (auto split_points: {50, 100, 200}) {
-			for (auto gp_points : {500, 1000}) {
-				test_model(
-					[split_points, gp_points, eps, &k]() -> BatchLearner<internal_t, internal_t, internal_t>* {return new GaussianModelTree<internal_t, internal_t, internal_t>(split_points, gp_points, 0, eps, k);},
+//			for (auto gp_points : {500, 1000}) {
+//				test_model(
+//					[split_points, gp_points, eps, &k]() -> BatchLearner<internal_t, internal_t, internal_t>* {return new GaussianModelTree<internal_t, internal_t, internal_t>(split_points, gp_points, 0, eps, k);},
+//					D,
+//					{
+//						std::make_pair("name","GMT"),
+//						std::make_pair("kernel",kname),
+//						std::make_pair("eps",std::to_string(eps)),
+//						std::make_pair("k_l1",k_l1),
+//						std::make_pair("k_l2",k_l2),
+//						std::make_pair("gp_points",std::to_string(gp_points)),
+//						std::make_pair("ivm_points",std::to_string(split_points)),
+//					},
+//					with_header,
+//					folds
+//				);
+//			}
+
+			test_model(
+				[split_points, eps, &k, &D]() -> BatchLearner<internal_t, internal_t, internal_t>* {
+					return new ModelTree<internal_t, internal_t, internal_t>(
+							[&D](size_t h) -> BatchLearner<internal_t, internal_t, internal_t>* {
+								return new TorchWrapper(new Net(D.dimension()));
+							},
+							[split_points, eps, &k](
+									unsigned int height) -> Splitter<internal_t, internal_t, internal_t> * { //-> DTSplitter<FT,LABEL_TYPE::BINARY>*
+								return new IVMSplitter<internal_t, internal_t, internal_t>(split_points, eps, k);
+							},
+							500,
+							2); //0);
+					},
 					D,
 					{
-						std::make_pair("name","GMT"),
+						std::make_pair("name","GMT-NN"),
 						std::make_pair("kernel",kname),
 						std::make_pair("eps",std::to_string(eps)),
 						std::make_pair("k_l1",k_l1),
 						std::make_pair("k_l2",k_l2),
-						std::make_pair("gp_points",std::to_string(gp_points)),
+						std::make_pair("gp_points","None"),
 						std::make_pair("ivm_points",std::to_string(split_points)),
 					},
 					with_header,
 					folds
 				);
-			}
 		}
 	}
 }
@@ -319,5 +431,4 @@ int main(int argc, char const* argv[]) {
 			print_header = false;
 		}
 	}
-
 }

@@ -18,8 +18,9 @@ set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} ")
 option(USE_NATIVE "Compile with [march|mtune]=native.   " OFF)
 option(USE_OPENMP "Build with OpenMP Support.           " OFF)
 option(USE_MKL "Build with Intel MKL Support.           " OFF)
+option(USE_TORCH "Build with Torch NN Support.          " OFF)
 
-message(" --CMAKE_CXX_FLAGS_RELEASE is ${CMAKE_CXX_FLAGS_RELEASE}")
+#message(" --CMAKE_CXX_FLAGS_RELEASE is ${CMAKE_CXX_FLAGS_RELEASE}")
 
 # For docker
 if (USE_NATIVE)
@@ -27,7 +28,6 @@ if (USE_NATIVE)
 endif ()
 
 set(INCLUDE_DIR "../submodules/ensembles/code/include")
-message(${INCLUDE_DIR})
 
 set(SRC_H 
     ${INCLUDE_DIR}/DecisionStump.h
@@ -44,13 +44,6 @@ set(SRC_H
     ${INCLUDE_DIR}/InformativeVectorMachine.h
 	${INCLUDE_DIR}/GaussianModelTree.h
 )
-
-# file(GLOB SRC_H ${INCLUDE_DIR}/*.h
-# )
-
-# Fix the dumb logger..
-#set(SRC_CC ${INCLUDE_DIR}/Logger.cc)
-#set(SRC_C "")
 
 if (USE_OPENMP)
     message("-- Enabling OpenMP")
@@ -83,12 +76,23 @@ if (USE_MKL AND NOT CROSS_COMPILE_TARGET_ARCH)
     endif ()
 endif ()
 
+if (USE_TORCH AND NOT CROSS_COMPILE_TARGET_ARCH)
+	set(CMAKE_PREFIX_PATH "/opt/libtorch/intel-nightly")
+	message("-- Using Torch support.")
+	find_package(Torch REQUIRED)
+
+	set(SRC_H ${SRC_H}
+		${INCLUDE_DIR}/TorchWrapper.h
+	)
+
+    add_definitions(-DUSE_TORCH)
+endif ()
+
 add_executable(main
         main.cpp ${SRC_CC} ${SRC_C} ${SRC_H}
 )
 target_include_directories(main PRIVATE ${INCLUDE_DIR})
 
-#add_executable(main_online
-#	    main_online.cpp ${SRC_CC} ${SRC_C} ${SRC_H}
-#)
-#target_include_directories(main_online PRIVATE ${INCLUDE_DIR})
+if (USE_TORCH)
+	target_link_libraries(main "${TORCH_LIBRARIES}")
+endif ()
