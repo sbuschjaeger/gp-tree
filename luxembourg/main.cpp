@@ -132,6 +132,7 @@ void test_model(
 
 	std::chrono::high_resolution_clock::time_point start, end;
 
+#pragma omp parallel for
 	for (size_t i = 0; i < folds; ++i) {
 		BatchLearner<internal_t, internal_t, internal_t> *model = createModel();
 		Dataset<internal_t,internal_t,internal_t> DTrain(splits, i);
@@ -148,7 +149,6 @@ void test_model(
 		} else {
 			internal_t variance = var(splits[i]);
 
-			std::cout << "TESTING MODEL" << std::endl;
 			error[i] = model->error(splits[i], [variance](std::vector<internal_t> const &pred, internal_t label) -> internal_t {
 				return (pred[0]-label)*(pred[0]-label)/variance;
 			});
@@ -251,65 +251,63 @@ void test_all_models(Dataset<internal_t, internal_t, internal_t> D,
 					 size_t folds = 5) {
 
 	for (auto eps : {0.05, 0.1}) {
-//		for (auto p : {200, 500, 1000}) {
-//			test_model(
-//				[p,eps,&k]() {return new GaussianProcess<internal_t, internal_t, internal_t>(p, eps, k);},
-//				D,
-//				{
-//					std::make_pair("name","GP"),
-//					std::make_pair("kernel",kname),
-//					std::make_pair("eps",std::to_string(eps)),
-//					std::make_pair("k_l1",k_l1),
-//					std::make_pair("k_l2",k_l2),
-//					std::make_pair("gp_points",std::to_string(p)),
-//					std::make_pair("ivm_points","None"),
-//				},
-//				with_header,
-//				folds
-//			);
-//			with_header = false;
-//		}
-
-//		for (auto p : {50, 100, 200}) {
-//			test_model(
-//				[p,eps,&k]() -> BatchLearner<internal_t, internal_t, internal_t>* {return new InformativeVectorMachine<internal_t, internal_t, internal_t>(p, eps, k);},
-//				D,
-//				{
-//					std::make_pair("name","IVM"),
-//					std::make_pair("kernel",kname),
-//					std::make_pair("eps",std::to_string(eps)),
-//					std::make_pair("k_l1",k_l1),
-//					std::make_pair("k_l2",k_l2),
-//					std::make_pair("gp_points","None"),
-//					std::make_pair("ivm_points",std::to_string(p)),
-//				},
-//				with_header,
-//				folds
-//			);
-//		}
-
-		for (auto split_points: {50, 100, 200}) {
-//			for (auto gp_points : {500, 1000}) {
-//				test_model(
-//					[split_points, gp_points, eps, &k]() -> BatchLearner<internal_t, internal_t, internal_t>* {return new GaussianModelTree<internal_t, internal_t, internal_t>(split_points, gp_points, 0, eps, k);},
-//					D,
-//					{
-//						std::make_pair("name","GMT"),
-//						std::make_pair("kernel",kname),
-//						std::make_pair("eps",std::to_string(eps)),
-//						std::make_pair("k_l1",k_l1),
-//						std::make_pair("k_l2",k_l2),
-//						std::make_pair("gp_points",std::to_string(gp_points)),
-//						std::make_pair("ivm_points",std::to_string(split_points)),
-//					},
-//					with_header,
-//					folds
-//				);
-//			}
-
+		for (auto p : {500, 1000}) {
 			test_model(
-				[split_points, eps, &k, &D]() -> BatchLearner<internal_t, internal_t, internal_t>* {
-					return new ModelTree<internal_t, internal_t, internal_t>(
+				[p,eps,&k]() {return new GaussianProcess<internal_t, internal_t, internal_t>(p, eps, k);},
+				D,
+				{
+					std::make_pair("name","GP"),
+					std::make_pair("kernel",kname),
+					std::make_pair("eps",std::to_string(eps)),
+					std::make_pair("k_l1",k_l1),
+					std::make_pair("k_l2",k_l2),
+					std::make_pair("gp_points",std::to_string(p)),
+					std::make_pair("ivm_points","None"),
+				},
+				with_header,
+				folds
+			);
+			with_header = false;
+		}
+
+		for (auto p : {50, 100}) {
+			test_model(
+				[p,eps,&k]() -> BatchLearner<internal_t, internal_t, internal_t>* {return new InformativeVectorMachine<internal_t, internal_t, internal_t>(p, eps, k);},
+				D,
+				{
+					std::make_pair("name","IVM"),
+					std::make_pair("kernel",kname),
+					std::make_pair("eps",std::to_string(eps)),
+					std::make_pair("k_l1",k_l1),
+					std::make_pair("k_l2",k_l2),
+					std::make_pair("gp_points","None"),
+					std::make_pair("ivm_points",std::to_string(p)),
+				},
+				with_header,
+				folds
+			);
+		}
+
+		for (auto split_points: {50, 100}) {
+			for (auto gp_points : {500, 1000}) {
+				test_model(
+					[split_points, gp_points, eps, &k]() -> BatchLearner<internal_t, internal_t, internal_t>* {return new GaussianModelTree<internal_t, internal_t, internal_t>(split_points, gp_points, 0, eps, k);},
+					D,
+					{
+						std::make_pair("name","GMT"),
+						std::make_pair("kernel",kname),
+						std::make_pair("eps",std::to_string(eps)),
+						std::make_pair("k_l1",k_l1),
+						std::make_pair("k_l2",k_l2),
+						std::make_pair("gp_points",std::to_string(gp_points)),
+						std::make_pair("ivm_points",std::to_string(split_points)),
+					},
+					with_header,
+					folds
+				);
+				test_model(
+					[split_points, gp_points, eps, &k, &D]() -> BatchLearner<internal_t, internal_t, internal_t>* {
+						return new ModelTree<internal_t, internal_t, internal_t>(
 							[&D](size_t h) -> BatchLearner<internal_t, internal_t, internal_t>* {
 								return new TorchWrapper(new Net(D.dimension()));
 							},
@@ -317,8 +315,8 @@ void test_all_models(Dataset<internal_t, internal_t, internal_t> D,
 									unsigned int height) -> Splitter<internal_t, internal_t, internal_t> * { //-> DTSplitter<FT,LABEL_TYPE::BINARY>*
 								return new IVMSplitter<internal_t, internal_t, internal_t>(split_points, eps, k);
 							},
-							500,
-							2); //0);
+							gp_points,
+							0);
 					},
 					D,
 					{
@@ -327,12 +325,13 @@ void test_all_models(Dataset<internal_t, internal_t, internal_t> D,
 						std::make_pair("eps",std::to_string(eps)),
 						std::make_pair("k_l1",k_l1),
 						std::make_pair("k_l2",k_l2),
-						std::make_pair("gp_points","None"),
+						std::make_pair("gp_points",std::to_string(gp_points)),
 						std::make_pair("ivm_points",std::to_string(split_points)),
 					},
 					with_header,
 					folds
 				);
+			}
 		}
 	}
 }
@@ -414,7 +413,7 @@ int main(int argc, char const* argv[]) {
 	bool print_header = true;
 	const size_t xval_runs = 10;
 
-	for (auto l : {0.01, 0.1, 1.0, 2.0}) {
+	for (auto l : {0.01, 0.1, 1.0}) {
 		Matern1_2<internal_t, internal_t> k12(l);
 		test_all_models(D, k12, "M12", std::to_string(l), "None", print_header, xval_runs);
 		print_header = false;
@@ -423,8 +422,8 @@ int main(int argc, char const* argv[]) {
 		print_header = false;
 	}
 
-	for (auto l1 : {0.5,1.0, 2.0, 5.0}) {
-		for (auto l2 : {0.5,1.0, 2.0, 5.0}) {
+	for (auto l1 : {0.5,1.0, 2.0}) {
+		for (auto l2 : {0.5,1.0, 2.0}) {
 			internal_t kparam[2] = {static_cast<internal_t>(l1),static_cast<internal_t>(l2)};
 			RBFKernel<internal_t,internal_t> k(kparam, dim);
 			test_all_models(D, k, "RBF", std::to_string(l1), std::to_string(l2), print_header, xval_runs);
