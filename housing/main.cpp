@@ -23,7 +23,7 @@ using internal_t = float;
 class Net : public TorchNet<internal_t, internal_t, internal_t> {
 public:
 	Net(size_t dim)
-		: fc1(dim, 5), fc2(5, 1) {
+		: fc1(dim, 10), fc2(10, 1) {
 		register_module("fc1", fc1);
 		register_module("fc2", fc2);
 	}
@@ -304,7 +304,7 @@ void test_all_models(Dataset<internal_t, internal_t, internal_t> D,
 			);
 		}
 
-		for (auto split_points: {20, 50}) {
+		for (auto split_points: {50, 100}) {
 			for (auto gp_points : {500, 1000}) {
 				test_model(
 					[split_points, gp_points, eps, &k]() -> BatchLearner<internal_t, internal_t, internal_t>* {return new GaussianModelTree<internal_t, internal_t, internal_t>(split_points, gp_points, 0, eps, k);},
