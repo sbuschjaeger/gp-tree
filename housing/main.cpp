@@ -120,7 +120,6 @@ T var(Dataset<internal_t,T,internal_t> const &D) {
 	return sum2/cnt;
 }
 
-
 void test_model(
 		std::function<BatchLearner<internal_t, internal_t, internal_t> *()> createModel,
 		Dataset<internal_t, internal_t, internal_t> D,
@@ -129,7 +128,9 @@ void test_model(
 		size_t folds = 5) {
 	std::vector<Dataset<internal_t,internal_t,internal_t>> splits = D.k_fold(folds);
 
-	std::vector<internal_t> error(folds, 0.0);
+	std::vector<internal_t> mse_error(folds, 0.0);
+	std::vector<internal_t> smse_error(folds, 0.0);
+	std::vector<internal_t> mae_error(folds, 0.0);
 	std::vector<long> test_time(folds);
 	std::vector<long> fit_time(folds);
 
@@ -148,13 +149,17 @@ void test_model(
 
 		start = std::chrono::high_resolution_clock::now();
 		if (!fitted) {
-			error[i] = std::numeric_limits<internal_t>::quiet_NaN();
+			mae_error[i] = std::numeric_limits<internal_t>::quiet_NaN();
+			mse_error[i] = std::numeric_limits<internal_t>::quiet_NaN();
+			smse_error[i] = std::numeric_limits<internal_t>::quiet_NaN();
 		} else {
-			internal_t variance = var(splits[i]);
-
-			error[i] = model->error(splits[i], [variance](std::vector<internal_t> const &pred, internal_t label) -> internal_t {
-				return (pred[0]-label)*(pred[0]-label)/variance;
+			mae_error[i] = model->error(splits[i], [](std::vector<internal_t> const &pred, internal_t label) -> internal_t {
+				return std::abs(pred[0]-label);
 			});
+			mse_error[i] = model->error(splits[i], [](std::vector<internal_t> const &pred, internal_t label) -> internal_t {
+				return (pred[0]-label)*(pred[0]-label);
+			});
+			smse_error[i] = mse_error[i]/var(splits[i]);
 			delete model;
 		}
 		end = std::chrono::high_resolution_clock::now();
@@ -162,18 +167,24 @@ void test_model(
 		test_time[i] = milliseconds.count();
 	}
 
-	internal_t acc = std::accumulate(error.begin(), error.end(), 0.0) / error.size();
-    
-	internal_t xval_var = 0.0;
-	std::for_each (error.begin(), error.end(), [&](const internal_t e) {
-		xval_var += (e - acc) * (e - acc);
-    });
-    xval_var /= error.size();
+	internal_t smse = std::accumulate(smse_error.begin(), smse_error.end(), 0.0) / smse_error.size();
+
+	/*internal_t xval_var = 0.0;
+	std::for_each (smse_error.begin(), smse_error.end(), [&](const internal_t e) {
+		xval_var += (e - smse) * (e - smse);
+	});
+	xval_var /= smse_error.size();*/
 
 	if (with_header) {
 		std::stringstream header;
 		for (auto &p : params) {
 			header << "\"" << p.first  << "\"" << Logger::sep;
+		}
+		for (size_t i = 0; i < folds; ++i) {
+			header << "MAE_" << i << Logger::sep;
+		}
+		for (size_t i = 0; i < folds; ++i) {
+			header << "MSE_" << i << Logger::sep;
 		}
 		for (size_t i = 0; i < folds; ++i) {
 			header << "SMSE_" << i << Logger::sep;
@@ -188,7 +199,7 @@ void test_model(
 				header << Logger::sep;
 			}
 		}
-		std::cout << header.str() << ",MEAN_SMSE,VAR_SMSE" << std::endl;
+		std::cout << header.str() << std::endl;
 		Logger::log("xval", header.str());
 	}
 
@@ -197,7 +208,13 @@ void test_model(
 		ss << "\"" << p.second  << "\"" << Logger::sep;
 	}
 	for (size_t i = 0; i < folds; ++i) {
-		ss << error[i] << Logger::sep;
+		ss << mae_error[i] << Logger::sep;
+	}
+	for (size_t i = 0; i < folds; ++i) {
+		ss << mse_error[i] << Logger::sep;
+	}
+	for (size_t i = 0; i < folds; ++i) {
+		ss << smse_error[i] << Logger::sep;
 	}
 	for (size_t i = 0; i < folds; ++i) {
 		ss << fit_time[i] << Logger::sep;
@@ -210,7 +227,10 @@ void test_model(
 		}
 	}
 	Logger::log("xval", ss.str());
-	std::cout << ss.str() << "\t " << acc << " +/-" << xval_var << std::endl;
+	std::cout << ss.str() << std::endl;
+	//"\t " << smse << " +/-" << xval_var << std::endl;
+//	std::cout << model_name << " SMSE is: " << smse << " +/-" << xval_var << std::endl;
+//	std::cout << "SMSE is: " << error / (static_cast<internal_t>(NTest)*var<internal_t>(YTest,NTest)) << std::endl << std::endl;
 }
 
 size_t read_csv(std::string const &path, std::vector<internal_t> &X, std::vector<internal_t> &Y) {
