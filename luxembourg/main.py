@@ -162,9 +162,17 @@ fig1, fig2 = frame_to_plot(df, "SMSE", 3)
 pio.write_image(fig1, 'fig1.pdf')
 pio.write_image(fig2, 'fig2.pdf')
 
-fig3, fig4 = frame_to_plot(df, "fit_time", 3)
-pio.write_image(fig3, 'fig3.pdf')
-pio.write_image(fig4, 'fig4.pdf')
+fig3, fig4 = frame_to_plot(df, "MSE", 3)
+pio.write_image(fig3, 'fig1.pdf')
+pio.write_image(fig4, 'fig2.pdf')
+
+fig5, fig6 = frame_to_plot(df, "MAE", 3)
+pio.write_image(fig1, 'fig5.pdf')
+pio.write_image(fig2, 'fig6.pdf')
+
+fig7, fig8 = frame_to_plot(df, "fit_time", 3)
+pio.write_image(fig3, 'fig7.pdf')
+pio.write_image(fig4, 'fig8.pdf')
 
 # fig4 = frame_to_plot(df, "fit_time", 5, False)
 # pio.write_image(fig4, 'fig4.pdf')
@@ -190,14 +198,22 @@ app.layout = html.Div([
 			'maxWidth':'1800'
 		}
 	),
-	html.H6("Top 5 best and worst SMSE"),
+	html.H6("Top 3 best and worst SMSE"),
 	dcc.Graph(id='plot-top-SMSE',figure=fig1),
 	html.H6("Whisker SMSE Plot"),
 	dcc.Graph(id='plot-whisker-SMSE',figure=fig2),
+	html.H6("Top 3 best and worst MSE"),
+	dcc.Graph(id='plot-best-mse',figure=fig3),
+	html.H6("Whisker MSE Plot"),
+	dcc.Graph(id='plot-whisker-mse',figure=fig4),
+	html.H6("Top 3 best and worst MAE"),
+	dcc.Graph(id='plot-best-mae',figure=fig5),
+	html.H6("Whisker MAE Plot"),
+	dcc.Graph(id='plot-whisker-mae',figure=fig6),
 	html.H6("Best FIT TIME"),
-	dcc.Graph(id='plot-best-fittime',figure=fig3),
+	dcc.Graph(id='plot-best-fittime',figure=fig7),
 	html.H6("Whisker FIT TIME Plot"),
-	dcc.Graph(id='plot-whisker-fittime',figure=fig4)
+	dcc.Graph(id='plot-whisker-fittime',figure=fig8)
 ])
 
 if __name__ == '__main__':

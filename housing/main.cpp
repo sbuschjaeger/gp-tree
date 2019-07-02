@@ -52,7 +52,7 @@ public:
 		auto tmp = D.map(torch::data::transforms::Stack<>());
 		auto train_loader =
 				torch::data::make_data_loader<torch::data::samplers::SequentialSampler>(std::move(tmp), bSize);
-		for (size_t i = 0; i < 10; ++i) {
+		for (size_t i = 0; i < 20; ++i) {
 			float mean_loss = 0;
 			size_t batch_cnt = 0;
 			for (auto &batch : *train_loader) {
@@ -267,7 +267,7 @@ void test_all_models(Dataset<internal_t, internal_t, internal_t> D,
 //	);
 
 	for (auto eps : {0.05, 0.1}) {
-		for (auto p : {500, 1000}) {
+		for (auto p : {500, 1000, 5000}) {
 			test_model(
 				[p,eps,&k]() {return new GaussianProcess<internal_t, internal_t, internal_t>(p, eps, k);},
 				D,
@@ -304,7 +304,7 @@ void test_all_models(Dataset<internal_t, internal_t, internal_t> D,
 			);
 		}
 
-		for (auto split_points: {50, 100}) {
+		for (auto split_points: {20, 50}) {
 			for (auto gp_points : {500, 1000}) {
 				test_model(
 					[split_points, gp_points, eps, &k]() -> BatchLearner<internal_t, internal_t, internal_t>* {return new GaussianModelTree<internal_t, internal_t, internal_t>(split_points, gp_points, 0, eps, k);},
@@ -386,7 +386,7 @@ int main(int argc, char const* argv[]) {
 		print_header = false;
 	}
 
-	for (auto l1 : {0.5,1.0, 2.0}) {
+	for (auto l1 : {0.5, 1.0, 2.0}) {
 		for (auto l2 : {0.5,1.0, 2.0}) {
 			internal_t kparam[2] = {static_cast<internal_t>(l1),static_cast<internal_t>(l2)};
 			RBFKernel<internal_t,internal_t> k(kparam, dim);
