@@ -130,9 +130,9 @@ def frame_to_plot(df, metric_name, num_entries = 5):
 				showgrid=True,
 				zeroline=True,
 				showline=True,
-				range=[0.48, 2.2],
-				tickvals = [0.5, 0.6, 0.7, 0.8, 0.9, 1.0, 1.1, 1.2, 1.3, 1.4, 1.5, 1.6, 1.7, 1.8, 1.9, 2.0, 2.1, 2.2],
-				ticktext = ["0.5", "0.6", "0.7", "0.8", "0.9", "1.0", "1.1", "1.2", "1.3", "1.4", "1.5", "1.6", "1.7", "1.8", "1.9", "2.0", "2.1", "2.2"]
+				# range=[0.48, 2.2],
+				# tickvals = [0.5, 0.6, 0.7, 0.8, 0.9, 1.0, 1.1, 1.2, 1.3, 1.4, 1.5, 1.6, 1.7, 1.8, 1.9, 2.0, 2.1, 2.2],
+				# ticktext = ["0.5", "0.6", "0.7", "0.8", "0.9", "1.0", "1.1", "1.2", "1.3", "1.4", "1.5", "1.6", "1.7", "1.8", "1.9", "2.0", "2.1", "2.2"]
 				# ticks='',
 				# showticklabels=True
 			),
@@ -177,7 +177,7 @@ def frame_to_plot(df, metric_name, num_entries = 5):
 df = pd.read_csv("build/xval.csv")
 df = df.round(4) # for displaying purposes everything is rounded
 
-fig1, fig2 = frame_to_plot(df, "SMSE", 3)
+fig1, fig2 = frame_to_plot(df, "ACCURACY", 3)
 pio.write_image(fig1, 'fig1.pdf')
 pio.write_image(fig2, 'fig2.pdf')
 
@@ -187,7 +187,7 @@ pio.write_image(fig2, 'fig2.pdf')
 # fig4 = frame_to_plot(df, "fit_time", 5, False)
 # pio.write_image(fig4, 'fig4.pdf')
 
-app = dash.Dash("Luxembourg experiments")
+app = dash.Dash("Magic experiments")
 
 app.layout = html.Div([
 	dash_table.DataTable(
@@ -208,10 +208,10 @@ app.layout = html.Div([
 			'maxWidth':'1800'
 		}
 	),
-	html.H6("Top 5 best and worst SMSE"),
-	dcc.Graph(id='plot-top-SMSE',figure=fig1),
-	html.H6("Whisker SMSE Plot"),
-	dcc.Graph(id='plot-whisker-SMSE',figure=fig2),
+	html.H6("Top 5 best and worst ACCURACY"),
+	dcc.Graph(id='plot-top-ACCURACY',figure=fig1),
+	html.H6("Whisker ACCURACY Plot"),
+	dcc.Graph(id='plot-whisker-ACCURACY',figure=fig2),
 	# html.H6("Best FIT TIME"),
 	# dcc.Graph(id='plot-best-fittime',figure=fig3),
 	# html.H6("Worst FIT TIME"),
