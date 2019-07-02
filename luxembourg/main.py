@@ -48,18 +48,6 @@ def sanitize(x):
 				ret_x += str(round(float(x[c]),2)) + " "
 
 	return ret_x[:-1]
-	# return str(x["name"]) + " " + str(x["kernel"]) + " " + 
-	# print(x)
-
-	# dwdwdw
-	# x = str(x)
-	# entries = x.split("_")
-
-	# ret_x = ""
-	# for e in entries[:-1]:
-	# 	ret_x += str(e) + " "
-
-	# return ret_x + str(entries[-1])
 
 def frame_to_plot(df, metric_name, num_entries = 5):
 	hover_columns = ["name","kernel","eps","k_l1","k_l2","gp_points","ivm_points"]
@@ -100,11 +88,6 @@ def frame_to_plot(df, metric_name, num_entries = 5):
 				text = t_both[metric_name + "_mean"].round(2).values, #t_both["hover_text"].values,
 				name = t_name,
 				textposition = 'outside'
-				# error_y=dict(
-				# 	type='data',
-				# 	array = t_both[metric_name + "_std"].values,
-				# 	visible=True
-				# )
 			)
 		)
 		
@@ -130,11 +113,9 @@ def frame_to_plot(df, metric_name, num_entries = 5):
 				showgrid=True,
 				zeroline=True,
 				showline=True,
-				range=[0.48, 2.2],
-				tickvals = [0.5, 0.6, 0.7, 0.8, 0.9, 1.0, 1.1, 1.2, 1.3, 1.4, 1.5, 1.6, 1.7, 1.8, 1.9, 2.0, 2.1, 2.2],
-				ticktext = ["0.5", "0.6", "0.7", "0.8", "0.9", "1.0", "1.1", "1.2", "1.3", "1.4", "1.5", "1.6", "1.7", "1.8", "1.9", "2.0", "2.1", "2.2"]
-				# ticks='',
-				# showticklabels=True
+				#range=[0.48, 2.2],
+				# tickvals = [0.5, 0.6, 0.7, 0.8, 0.9, 1.0, 1.1, 1.2, 1.3, 1.4, 1.5, 1.6, 1.7, 1.8, 1.9, 2.0, 2.1, 2.2],
+				# ticktext = ["0.5", "0.6", "0.7", "0.8", "0.9", "1.0", "1.1", "1.2", "1.3", "1.4", "1.5", "1.6", "1.7", "1.8", "1.9", "2.0", "2.1", "2.2"]
 			),
 			# xaxis = dict(
 			#   categoryorder = "array",
@@ -142,7 +123,7 @@ def frame_to_plot(df, metric_name, num_entries = 5):
 			# ), 
 			showlegend=True,
 			legend=dict(orientation="h"),
-			margin=dict(l=25, r=10, t=10, b=0)
+			margin=dict(l=45, r=10, t=10, b=0)
 			#title = metric_name
 		)
 	}
@@ -181,8 +162,9 @@ fig1, fig2 = frame_to_plot(df, "SMSE", 3)
 pio.write_image(fig1, 'fig1.pdf')
 pio.write_image(fig2, 'fig2.pdf')
 
-# fig3 = frame_to_plot(df, "fit_time", 5, True)
-# pio.write_image(fig3, 'fig3.pdf')
+fig3, fig4 = frame_to_plot(df, "fit_time", 3)
+pio.write_image(fig3, 'fig3.pdf')
+pio.write_image(fig4, 'fig4.pdf')
 
 # fig4 = frame_to_plot(df, "fit_time", 5, False)
 # pio.write_image(fig4, 'fig4.pdf')
@@ -212,10 +194,10 @@ app.layout = html.Div([
 	dcc.Graph(id='plot-top-SMSE',figure=fig1),
 	html.H6("Whisker SMSE Plot"),
 	dcc.Graph(id='plot-whisker-SMSE',figure=fig2),
-	# html.H6("Best FIT TIME"),
-	# dcc.Graph(id='plot-best-fittime',figure=fig3),
-	# html.H6("Worst FIT TIME"),
-	# dcc.Graph(id='plot-worst-fittime',figure=fig4)
+	html.H6("Best FIT TIME"),
+	dcc.Graph(id='plot-best-fittime',figure=fig3),
+	html.H6("Whisker FIT TIME Plot"),
+	dcc.Graph(id='plot-whisker-fittime',figure=fig4)
 ])
 
 if __name__ == '__main__':
