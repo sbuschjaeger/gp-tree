@@ -57,7 +57,7 @@ public:
 			size_t batch_cnt = 0;
 			for (auto &batch : *train_loader) {
 				auto examples = batch.data.to(device);
-				auto targets = batch.target.slice(1, 0, 1, 1).to(torch::kLong); // dim, start, end, step
+				auto targets = batch.target.slice(1, 0, 1, 1); // dim, start, end, step
 				auto weights = batch.target.slice(1, 1, 2, 1);
 //				std::cout << "original_targets = " << batch.target << std::endl;
 				//std::cout << "targets = " << targets << std::endl;
