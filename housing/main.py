@@ -31,72 +31,25 @@ def simple_name(x):
 	else:
 		return "IVM"
 
-def sanitize(x, latex=False):
-	if latex:
-		ret_x = r"\text{" + str(x["name"]) + "}" + r"\\"
-		if x["k_l2"] == "None":
-			ret_x += str(x["kernel"]) + ", " + str(round(float(x["k_l1"]),2)) + r"\\"
+def sanitize(x):
+	hover_columns = ["name","kernel","eps","k_l1","k_l2","gp_points","ivm_points"]
+
+	ret_x = ""
+	for c in hover_columns:
+		if x[c] == "None":
+			pass
+			#ret_x += "N "
+		elif (c == "name" or c == "kernel"):
+			ret_x += str(x[c]) + " "
 		else:
-			ret_x += str(x["kernel"]) + "," + str(round(float(x["k_l1"]),2)) + "," + str(round(float(x["k_l2"]),2)) + r"\\"
-		
-		ret_x += r"\varepsilon = " + str(x["eps"]) + r"\\"
-		
-		if x["gp_points"] != "None":
-			ret_x += "c = " + str(x["gp_points"]) + r"\\"
+			if (int(float(x[c])) == float(x[c])):
+				ret_x += str(int(float(x[c]))) + " "
+			else:
+				ret_x += str(round(float(x[c]),2)) + " "
 
-		if x["ivm_points"] != "None":
-			ret_x += r"\tau = " + str(x["ivm_points"])
+	return ret_x[:-1]
 
-		if "GMT" in ret_x:
-			margin_text = ''.join(np.repeat(r"\phantom{+}\\", 2, axis=0))
-			#print(margin_text)
-		else:
-			margin_text = ''.join(np.repeat(r"~\\", 2, axis=0))
-			#print(margin_text)
-
-		ret_x = "$" + margin_text + ret_x + "$"
-		return ret_x
-	else:
-		ret_x = "" + str(x["name"]) + "<br>"
-		if x["k_l2"] == "None":
-			ret_x += str(x["kernel"]) + ", " + str(x["k_l1"]) + "<br>"
-		else:
-			ret_x += str(x["kernel"]) + "," + str(x["k_l1"]) + "," + str(x["k_l2"]) + "<br>"
-		
-		ret_x += "eps = " + str(x["eps"]) 
-		
-		if x["gp_points"] != "None":
-			ret_x += ", c = " + str(x["gp_points"]) 
-		if x["ivm_points"] != "None":
-			ret_x += r", tau = " + str(x["ivm_points"]) 
-
-		return ret_x
-	# hover_columns = ["name","kernel","eps","k_l1","k_l2","gp_points","ivm_points"]
-
-	# ret_x = ""
-	# for c in hover_columns:
-	# 	if x[c] == "None":
-	# 		pass
-	# 		#ret_x += "N "
-	# 	elif (c == "name"):
-	# 		ret_x += str(x[c]) + "\n"
-	# 	elif c == "kernel":
-	# 		ret_x += "k = "str(x[c]) + "\n"
-	# 	elfi c == 
-	# 	else:
-	# 		if ()
-	# 		ret_x += " = "str(x[c])
-	# 		if (int(float(x[c])) == float(x[c])):
-	# 			ret_x += str(int(float(x[c]))) + " "
-	# 		else:
-	# 			ret_x += str(round(float(x[c]),2)) + " "
-
-	# return ret_x[:-1]
-
-def frame_to_plot(param_df, metric_name, num_entries = 5, latex=False):
-	# to avoid awkward problems with adding / removing columns or chaning data, we will
-	# take a copy first
-	df = param_df.copy()
+def frame_to_plot(df, metric_name, num_entries = 5):
 	hover_columns = ["name","kernel","eps","k_l1","k_l2","gp_points","ivm_points"]
 	plot_names = df["name"]
 	metric_columns = []
@@ -107,7 +60,7 @@ def frame_to_plot(param_df, metric_name, num_entries = 5, latex=False):
 	df[metric_name + "_var"] = df[metric_columns].var(axis=1)
 	df[metric_name + "_std"] = df[metric_columns].std(axis=1)
 	#df["hover_text"] = df[hover_columns].apply(lambda x: '_'.join(x.map(str)), axis=1)
-	df["hover_text"] = df[hover_columns].apply(lambda x: sanitize(x,latex), axis=1)
+	df["hover_text"] = df[hover_columns].apply(lambda x: sanitize(x), axis=1)
 	df["simple_name"] = df["hover_text"].apply(lambda x: simple_name(x))
 
 	min_y = min(df[metric_name + "_mean"].values)
@@ -163,12 +116,15 @@ def frame_to_plot(param_df, metric_name, num_entries = 5, latex=False):
 				tickfont=dict(
 		            size=12,
 		            color='black'
-		        ),
+		        )
 				#range=[0.48, 2.2],
 				# tickvals = [0.5, 0.6, 0.7, 0.8, 0.9, 1.0, 1.1, 1.2, 1.3, 1.4, 1.5, 1.6, 1.7, 1.8, 1.9, 2.0, 2.1, 2.2],
 				# ticktext = ["0.5", "0.6", "0.7", "0.8", "0.9", "1.0", "1.1", "1.2", "1.3", "1.4", "1.5", "1.6", "1.7", "1.8", "1.9", "2.0", "2.1", "2.2"]
 			),
 			xaxis = dict(
+			categoryorder = "array",
+			categoryarray = tmp_df["hover_text"] ,
+			tickangle=-70,
 				tickfont=dict(
 					size=12,
 					color='black'
@@ -191,23 +147,18 @@ def frame_to_plot(param_df, metric_name, num_entries = 5, latex=False):
 		'layout': dict(
 			yaxis = dict(
 				tickfont=dict(
-		            size=16,
-		            color='black',
-		            family="Times New Roman,bold"
-		        ),
+		            size=12,
+		            color='black'
+		        )
 			),
 			xaxis = dict(
 				categoryorder = "array",
-				categoryarray = tmp_df["hover_text"],
-				ticks = "outside",
-				# automargin=True
-				# tickangle=0,
-				#ticklen=30
-				# tickfont=dict(
-		  #           size=12,
-		  #           family="Compute Bright modern",
-		  #           color='black'
-		  #       ),
+				categoryarray = tmp_df["hover_text"] ,
+				tickangle=-70,
+				tickfont=dict(
+		            size=12,
+		            color='black'
+		        ),
 			),
 			showlegend=True,
 			legend=dict(
@@ -215,7 +166,7 @@ def frame_to_plot(param_df, metric_name, num_entries = 5, latex=False):
 	        	x=0.03, 
 	        	y=0.99
 			),
-			margin=dict(l=35, r=10, t=10, b=120)
+			margin=dict(l=35, r=10, t=10, b=150)
 			#title = metric_name
 		)
 	}
@@ -225,30 +176,26 @@ def frame_to_plot(param_df, metric_name, num_entries = 5, latex=False):
 df = pd.read_csv("build/xval.csv")
 df = df.round(4) # for displaying purposes everything is rounded
 
-fig1, fig2 = frame_to_plot(df, "SMSE", 1)
-fig1_latex, fig2_latex = frame_to_plot(df, "SMSE", 1, True)
-pio.write_image(fig1_latex, 'SMSE_BOX.pdf')
-pio.write_image(fig2_latex, 'SMSE_WHISKER.pdf')
+fig1, fig2 = frame_to_plot(df, "SMSE", 2)
+pio.write_image(fig1, 'fig1.pdf')
+pio.write_image(fig2, 'fig2.pdf')
 
-fig3, fig4 = frame_to_plot(df, "MSE", 1)
-fig3_latex, fig4_latex = frame_to_plot(df, "MSE", 1, True)
-pio.write_image(fig3_latex, 'MSE_BOX.pdf')
-pio.write_image(fig4_latex, 'MSE_WHISKER.pdf')
+fig3, fig4 = frame_to_plot(df, "MSE", 2)
+pio.write_image(fig3, 'fig1.pdf')
+pio.write_image(fig4, 'fig2.pdf')
 
-fig5, fig6 = frame_to_plot(df, "MAE", 1)
-fig5_latex, fig6_latex = frame_to_plot(df, "MAE", 1, True)
-pio.write_image(fig5_latex, 'MAE_BOX.pdf')
-pio.write_image(fig6_latex, 'MAE_WHISKER.pdf')
+fig5, fig6 = frame_to_plot(df, "MAE", 2)
+pio.write_image(fig1, 'fig5.pdf')
+pio.write_image(fig2, 'fig6.pdf')
 
-fig7, fig8 = frame_to_plot(df, "fit_time", 1)
-fig7_latex, fig8_latex = frame_to_plot(df, "fit_time", 1, True)
-pio.write_image(fig7_latex, 'FITTIME_BOX.pdf')
-pio.write_image(fig8_latex, 'FITTIME_WHISKER.pdf')
+fig7, fig8 = frame_to_plot(df, "fit_time", 2)
+pio.write_image(fig3, 'fig7.pdf')
+pio.write_image(fig4, 'fig8.pdf')
 
 # fig4 = frame_to_plot(df, "fit_time", 5, False)
 # pio.write_image(fig4, 'fig4.pdf')
 
-app = dash.Dash("Luxembourg experiments")
+app = dash.Dash("Housing experiments")
 
 app.layout = html.Div([
 	dash_table.DataTable(

@@ -52,7 +52,7 @@ public:
 		auto tmp = D.map(torch::data::transforms::Stack<>());
 		auto train_loader =
 				torch::data::make_data_loader<torch::data::samplers::SequentialSampler>(std::move(tmp), bSize);
-		for (size_t i = 0; i < 50; ++i) {
+		for (size_t i = 0; i < 20; ++i) {
 			float mean_loss = 0;
 			size_t batch_cnt = 0;
 			for (auto &batch : *train_loader) {
