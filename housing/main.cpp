@@ -52,7 +52,7 @@ public:
 		auto tmp = D.map(torch::data::transforms::Stack<>());
 		auto train_loader =
 				torch::data::make_data_loader<torch::data::samplers::SequentialSampler>(std::move(tmp), bSize);
-		for (size_t i = 0; i < 20; ++i) {
+		for (size_t i = 0; i < 30; ++i) {
 			float mean_loss = 0;
 			size_t batch_cnt = 0;
 			for (auto &batch : *train_loader) {
@@ -327,7 +327,7 @@ void test_all_models(Dataset<internal_t, internal_t, internal_t> D,
 		for (auto split_points: {50, 100}) {
 			for (auto gp_points : {500, 1000}) {
 				test_model(
-					[split_points, gp_points, eps, &k]() -> BatchLearner<internal_t, internal_t, internal_t>* {return new GaussianModelTree<internal_t, internal_t, internal_t>(split_points, gp_points, 0, eps, k);},
+					[split_points, gp_points, eps, &k]() -> BatchLearner<internal_t, internal_t, internal_t>* {return new GaussianModelTree<internal_t, internal_t, internal_t>(split_points, gp_points, 5, eps, k);},
 					D,
 					{
 						std::make_pair("name","GMT"),
@@ -352,7 +352,7 @@ void test_all_models(Dataset<internal_t, internal_t, internal_t> D,
 								return new IVMSplitter<internal_t, internal_t, internal_t>(split_points, eps, k);
 							},
 							gp_points,
-							0);
+							5);
 					},
 					D,
 					{
