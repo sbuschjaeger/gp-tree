@@ -23,7 +23,7 @@ using internal_t = float;
 class Net : public TorchNet<internal_t, internal_t, internal_t> {
 public:
 	Net(size_t dim)
-		: fc1(dim, 10), fc2(10, 1) {
+		: fc1(dim, 5), fc2(5, 1) {
 		register_module("fc1", fc1);
 		register_module("fc2", fc2);
 	}
@@ -66,7 +66,7 @@ public:
 				try {
 					//batch.data()
 					targets = targets.to(device);
-					weights = weights .to(device);
+					weights = weights.to(device);
 
 					optimizer.zero_grad();
 					//std::cout << data << std::endl;
@@ -261,7 +261,7 @@ size_t read_csv(std::string const &path, std::vector<internal_t> &X, std::vector
 					if (i < tmp.size() - 1) {
 						X.push_back(static_cast<internal_t>(std::stof(tmp[i])));
 					} else {
-						Y.push_back(static_cast<internal_t>(std::stof(tmp[i])));
+						Y.push_back(std::log(static_cast<internal_t>(std::stof(tmp[i]))));
 					}
 				}
 			}
@@ -397,15 +397,6 @@ int main(int argc, char const* argv[]) {
 	bool print_header = true;
 	const size_t xval_runs = 10;
 
-	for (auto l : {0.01, 0.1, 1.0}) {
-		Matern1_2<internal_t, internal_t> k12(l);
-		test_all_models(D, k12, "M12", std::to_string(l), "None", print_header, xval_runs);
-		print_header = false;
-		Matern5_2<internal_t, internal_t> k52(l);
-		test_all_models(D, k52, "M52", std::to_string(l), "None", print_header, xval_runs);
-		print_header = false;
-	}
-
 	for (auto l1 : {0.5, 1.0, 2.0}) {
 		for (auto l2 : {0.5,1.0, 2.0}) {
 			internal_t kparam[2] = {static_cast<internal_t>(l1),static_cast<internal_t>(l2)};
@@ -413,5 +404,14 @@ int main(int argc, char const* argv[]) {
 			test_all_models(D, k, "RBF", std::to_string(l1), std::to_string(l2), print_header, xval_runs);
 			print_header = false;
 		}
+	}
+
+	for (auto l : {0.01, 0.1, 1.0}) {
+		Matern1_2<internal_t, internal_t> k12(l);
+		test_all_models(D, k12, "M12", std::to_string(l), "None", print_header, xval_runs);
+		print_header = false;
+		Matern5_2<internal_t, internal_t> k52(l);
+		test_all_models(D, k52, "M52", std::to_string(l), "None", print_header, xval_runs);
+		print_header = false;
 	}
 }

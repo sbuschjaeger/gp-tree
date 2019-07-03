@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.8)
-project(MagicExperiment) #TODO RENAME
+project(HousingExperiment) #TODO RENAME
 
 set(CMAKE_CXX_STANDARD 17)
 # At the momement we dont care about unused variables
