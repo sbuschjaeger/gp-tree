@@ -51,7 +51,7 @@ public:
 		auto tmp = D.map(torch::data::transforms::Stack<>());
 		auto train_loader =
 				torch::data::make_data_loader<torch::data::samplers::SequentialSampler>(std::move(tmp), bSize);
-		for (size_t i = 0; i < 50; ++i) {
+		for (size_t i = 0; i < 20; ++i) {
 			float mean_loss = 0;
 			size_t batch_cnt = 0;
 			for (auto &batch : *train_loader) {
@@ -270,7 +270,7 @@ void test_all_models(Dataset<internal_t, internal_t, internal_t> D,
 					 size_t folds = 5) {
 
 	for (auto eps : {0.05, 0.1}) {
-		for (auto p : {500, 1000}) {
+		for (auto p : {500, 1000, 5000}) {
 			test_model(
 				[p,eps,&k]() {return new GaussianProcess<internal_t, internal_t, internal_t>(p, eps, k);},
 				D,
