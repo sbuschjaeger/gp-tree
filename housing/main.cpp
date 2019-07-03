@@ -91,7 +91,7 @@ public:
 			}
 			//std::cout << "loss: " << mean_loss / batch_cnt << std::endl;
 		}
-		std::cout << std::endl;
+		//std::cout << std::endl;
 		return true;
 	}
 
@@ -136,7 +136,7 @@ void test_model(
 
 	std::chrono::high_resolution_clock::time_point start, end;
 
-#pragma omp parallel for
+//#pragma omp parallel for
 	for (size_t i = 0; i < folds; ++i) {
 		BatchLearner<internal_t, internal_t, internal_t> *model = createModel();
 		Dataset<internal_t,internal_t,internal_t> DTrain(splits, i);
@@ -287,7 +287,7 @@ void test_all_models(Dataset<internal_t, internal_t, internal_t> D,
 //	);
 
 	for (auto eps : {0.05, 0.1}) {
-		for (auto p : {500, 1000, 5000}) {
+		/*for (auto p : {500, 1000, 5000}) {
 			test_model(
 				[p,eps,&k]() {return new GaussianProcess<internal_t, internal_t, internal_t>(p, eps, k);},
 				D,
@@ -322,10 +322,10 @@ void test_all_models(Dataset<internal_t, internal_t, internal_t> D,
 				with_header,
 				folds
 			);
-		}
+		}*/
 
-		for (auto split_points: {50, 100}) {
-			for (auto gp_points : {500, 1000}) {
+		for (auto split_points: {5}) { //100
+			for (auto gp_points : {100}) {
 				test_model(
 					[split_points, gp_points, eps, &k]() -> BatchLearner<internal_t, internal_t, internal_t>* {return new GaussianModelTree<internal_t, internal_t, internal_t>(split_points, gp_points, 0, eps, k);},
 					D,
@@ -341,6 +341,8 @@ void test_all_models(Dataset<internal_t, internal_t, internal_t> D,
 					with_header,
 					folds
 				);
+				return;
+				/*
 				test_model(
 					[split_points, gp_points, eps, &k, &D]() -> BatchLearner<internal_t, internal_t, internal_t>* {
 						return new ModelTree<internal_t, internal_t, internal_t>(
@@ -366,7 +368,7 @@ void test_all_models(Dataset<internal_t, internal_t, internal_t> D,
 					},
 					with_header,
 					folds
-				);
+				); */
 			}
 		}
 	}
@@ -395,8 +397,15 @@ int main(int argc, char const* argv[]) {
 
 	Dataset<internal_t, internal_t, internal_t> D(&X[0], &Y[0], N, dim);
 	bool print_header = true;
-	const size_t xval_runs = 10;
+	const size_t xval_runs = 2;
 
+	internal_t kparam[2] = {1.0, 1.0};
+        RBFKernel<internal_t,internal_t> k(kparam, dim);
+        test_all_models(D, k, "RBF", std::to_string(1.0), std::to_string(1.0), print_header, xval_runs);
+        print_header = false;
+
+	
+/*
 	for (auto l1 : {0.5, 1.0, 2.0}) {
 		for (auto l2 : {0.5,1.0, 2.0}) {
 			internal_t kparam[2] = {static_cast<internal_t>(l1),static_cast<internal_t>(l2)};
@@ -414,4 +423,5 @@ int main(int argc, char const* argv[]) {
 		test_all_models(D, k52, "M52", std::to_string(l), "None", print_header, xval_runs);
 		print_header = false;
 	}
+*/
 }
