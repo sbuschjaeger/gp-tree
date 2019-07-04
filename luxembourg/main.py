@@ -94,8 +94,7 @@ def sanitize(x, latex=False):
 	# return ret_x[:-1]
 
 def frame_to_plot(param_df, metric_name, num_entries = 5, latex=False):
-	# to avoid awkward problems with adding / removing columns or chaning data, we will
-	# take a copy first
+	# to avoid awkward problems with adding / removing columns, we will take a copy first
 	df = param_df.copy()
 	hover_columns = ["name","kernel","eps","k_l1","k_l2","gp_points","ivm_points"]
 	plot_names = df["name"]
@@ -137,6 +136,10 @@ def frame_to_plot(param_df, metric_name, num_entries = 5, latex=False):
 				textposition = 'outside'
 			)
 		)
+
+		#if latex:
+		t_name = r"$\text{" + t_name + "}$"
+		#print("t_name = ", t_name)
 		
 		whisker_figure.append(
 			go.Box(
@@ -156,32 +159,16 @@ def frame_to_plot(param_df, metric_name, num_entries = 5, latex=False):
 		'data': whisker_figure,
 		'layout': dict(
 			 yaxis=dict(
-				#autorange=True,
 				showgrid=True,
 				zeroline=True,
-				showline=True,
 				tickfont=dict(
-		            size=12,
-		            color='black'
+		            size=16,
+		            color='black',
+		            family="Times New Roman,bold"
 		        ),
-				#range=[0.48, 2.2],
-				# tickvals = [0.5, 0.6, 0.7, 0.8, 0.9, 1.0, 1.1, 1.2, 1.3, 1.4, 1.5, 1.6, 1.7, 1.8, 1.9, 2.0, 2.1, 2.2],
-				# ticktext = ["0.5", "0.6", "0.7", "0.8", "0.9", "1.0", "1.1", "1.2", "1.3", "1.4", "1.5", "1.6", "1.7", "1.8", "1.9", "2.0", "2.1", "2.2"]
 			),
-			xaxis = dict(
-				tickfont=dict(
-					size=12,
-					color='black'
-				),
-			),
-			# xaxis = dict(
-			#   categoryorder = "array",
-			#   categoryarray = tmp_df["hover_text"] 
-			# ), 
-			showlegend=True,
-			legend=dict(orientation="h"),
-			margin=dict(l=45, r=10, t=10, b=0)
-			#title = metric_name
+			showlegend=False,
+			margin=dict(l=45, r=10, t=10, b=20)
 		)
 	}
 
@@ -200,22 +187,14 @@ def frame_to_plot(param_df, metric_name, num_entries = 5, latex=False):
 				categoryorder = "array",
 				categoryarray = tmp_df["hover_text"],
 				ticks = "outside",
-				# automargin=True
-				# tickangle=0,
-				#ticklen=30
-				# tickfont=dict(
-		  #           size=12,
-		  #           family="Compute Bright modern",
-		  #           color='black'
-		  #       ),
 			),
-			showlegend=True,
+			showlegend=False,
 			legend=dict(
 				orientation="h",
 	        	x=0.03, 
 	        	y=0.99
 			),
-			margin=dict(l=35, r=10, t=10, b=120)
+			margin=dict(l=35, r=10, t=10, b=90)
 			#title = metric_name
 		)
 	}
@@ -225,30 +204,32 @@ def frame_to_plot(param_df, metric_name, num_entries = 5, latex=False):
 df = pd.read_csv("build/xval.csv")
 df = df.round(4) # for displaying purposes everything is rounded
 
+experiment_name = "Luxembourg" 
+
 fig1, fig2 = frame_to_plot(df, "SMSE", 1)
 fig1_latex, fig2_latex = frame_to_plot(df, "SMSE", 1, True)
-pio.write_image(fig1_latex, 'SMSE_BOX.pdf')
-pio.write_image(fig2_latex, 'SMSE_WHISKER.pdf')
+pio.write_image(fig1_latex, experiment_name + '_SMSE_BOX.pdf')
+pio.write_image(fig2_latex, experiment_name + '_SMSE_WHISKER.pdf')
 
 fig3, fig4 = frame_to_plot(df, "MSE", 1)
 fig3_latex, fig4_latex = frame_to_plot(df, "MSE", 1, True)
-pio.write_image(fig3_latex, 'MSE_BOX.pdf')
-pio.write_image(fig4_latex, 'MSE_WHISKER.pdf')
+pio.write_image(fig3_latex, experiment_name + '_MSE_BOX.pdf')
+pio.write_image(fig4_latex, experiment_name + '_MSE_WHISKER.pdf')
 
 fig5, fig6 = frame_to_plot(df, "MAE", 1)
 fig5_latex, fig6_latex = frame_to_plot(df, "MAE", 1, True)
-pio.write_image(fig5_latex, 'MAE_BOX.pdf')
-pio.write_image(fig6_latex, 'MAE_WHISKER.pdf')
+pio.write_image(fig5_latex, experiment_name + '_MAE_BOX.pdf')
+pio.write_image(fig6_latex, experiment_name + '_MAE_WHISKER.pdf')
 
 fig7, fig8 = frame_to_plot(df, "fit_time", 1)
 fig7_latex, fig8_latex = frame_to_plot(df, "fit_time", 1, True)
-pio.write_image(fig7_latex, 'FITTIME_BOX.pdf')
-pio.write_image(fig8_latex, 'FITTIME_WHISKER.pdf')
+pio.write_image(fig7_latex, experiment_name + '_FITTIME_BOX.pdf')
+pio.write_image(fig8_latex, experiment_name + '_FITTIME_WHISKER.pdf')
 
 # fig4 = frame_to_plot(df, "fit_time", 5, False)
 # pio.write_image(fig4, 'fig4.pdf')
 
-app = dash.Dash("Luxembourg experiments")
+app = dash.Dash(experiment_name + " experiments")
 
 app.layout = html.Div([
 	dash_table.DataTable(

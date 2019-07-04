@@ -408,7 +408,7 @@ int main(int argc, char const* argv[]) {
 	}
 
 	for (auto l : {0.01, 0.1, 1.0}) {
-		Matern1_2<internal_t, internal_t> k12(l);
+		Matern3_2<internal_t, internal_t> k12(l);
 		test_all_models(D, k12, "M12", std::to_string(l), "None", print_header, xval_runs);
 		print_header = false;
 		Matern5_2<internal_t, internal_t> k52(l);
