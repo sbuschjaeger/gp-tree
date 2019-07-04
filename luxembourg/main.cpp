@@ -22,9 +22,10 @@ using internal_t = float;
 class Net : public TorchNet<internal_t, internal_t, internal_t> {
 public:
 	Net(size_t dim)
-		: fc1(dim, 5), fc2(5, 1) {
+		: fc1(dim, 20), fc2(20, 20), fc3(20, 1) {
 		register_module("fc1", fc1);
 		register_module("fc2", fc2);
+		register_module("fc3", fc3);
 	}
 
 	size_t size() const {
@@ -32,12 +33,13 @@ public:
 	}
 
 	std::string str() const {
-		return "FCNN(dim->5->1)";
+		return "FCNN(dim->20->20->1)";
 	}
 
 	torch::Tensor predict(torch::Tensor x) {
 		x = torch::relu(fc1->forward(x));
-		x = fc2->forward(x);
+		x = torch::relu(fc2->forward(x));
+		x = fc3->forward(x);
 		return x;
 	}
 
@@ -95,6 +97,7 @@ public:
 
 	torch::nn::Linear fc1;
 	torch::nn::Linear fc2;
+	torch::nn::Linear fc3;
 };
 
 
@@ -269,8 +272,8 @@ void test_all_models(Dataset<internal_t, internal_t, internal_t> D,
 					 bool with_header = false,
 					 size_t folds = 5) {
 
-	for (auto eps : {0.05, 0.1}) {
-		for (auto p : {500, 1000, 5000}) {
+	for (auto eps : {0.1}) {
+		for (auto p : {500, 1000, 5000, 10000}) {
 			test_model(
 				[p,eps,&k]() {return new GaussianProcess<internal_t, internal_t, internal_t>(p, eps, k);},
 				D,
@@ -289,7 +292,7 @@ void test_all_models(Dataset<internal_t, internal_t, internal_t> D,
 			with_header = false;
 		}
 
-		for (auto p : {50, 100}) {
+		for (auto p : {50, 100, 200}) {
 			test_model(
 				[p,eps,&k]() -> BatchLearner<internal_t, internal_t, internal_t>* {return new InformativeVectorMachine<internal_t, internal_t, internal_t>(p, eps, k);},
 				D,
@@ -308,7 +311,7 @@ void test_all_models(Dataset<internal_t, internal_t, internal_t> D,
 		}
 
 		for (auto split_points: {50, 100}) {
-			for (auto gp_points : {500, 1000}) {
+			for (auto gp_points : {500, 1000, 5000, 10000}) {
 				test_model(
 					[split_points, gp_points, eps, &k]() -> BatchLearner<internal_t, internal_t, internal_t>* {return new GaussianModelTree<internal_t, internal_t, internal_t>(split_points, gp_points, 0, eps, k);},
 					D,
@@ -433,20 +436,13 @@ int main(int argc, char const* argv[]) {
 	const size_t xval_runs = 10;
 
 	for (auto l : {0.01, 0.1, 1.0}) {
-		Matern1_2<internal_t, internal_t> k12(l);
-		test_all_models(D, k12, "M12", std::to_string(l), "None", print_header, xval_runs);
+		Matern3_2<internal_t, internal_t> k32(l);
+		test_all_models(D, k32, "M32", std::to_string(l), "None", print_header, xval_runs);
 		print_header = false;
 		Matern5_2<internal_t, internal_t> k52(l);
 		test_all_models(D, k52, "M52", std::to_string(l), "None", print_header, xval_runs);
 		print_header = false;
-	}
-
-	for (auto l1 : {0.5,1.0, 2.0}) {
-		for (auto l2 : {0.5,1.0, 2.0}) {
-			internal_t kparam[2] = {static_cast<internal_t>(l1),static_cast<internal_t>(l2)};
-			RBFKernel<internal_t,internal_t> k(kparam, dim);
-			test_all_models(D, k, "RBF", std::to_string(l1), std::to_string(l2), print_header, xval_runs);
-			print_header = false;
-		}
+		RBFKernel<internal_t,internal_t> kRBF(l, dim);
+		test_all_models(D, kRBF, "RBF", std::to_string(l), "None", print_header, xval_runs);
 	}
 }
