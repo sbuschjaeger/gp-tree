@@ -2,9 +2,10 @@
 
 This repository contains the experiments for the paper "Gaussian Model Trees for Regression" by Sebastian Buschjäger, Thomas Liebig and Katharina Morik. If you have any questions please contact me directly
 
-Sebastian Buschjäger (http://www-ai.cs.tu-dortmund.de/PERSONAL/buschjaeger.html) using sebastian.buschjaeger@tu-dortmund.de
+Sebastian Buschjäger (http://www-ai.cs.tu-dortmund.de/PERSONAL/buschjaeger.html) sebastian.buschjaeger@tu-dortmund.de
 
 In order to run the experiments you will need the following tools:
+
 - git
 - cmake>=3.8
 - A compiler for C++17 code (The code is tested with g++ 7 and 8)
@@ -13,12 +14,14 @@ In order to run the experiments you will need the following tools:
 - For faster matrix operations you can use MKL (https://software.intel.com/en-us/mkl)
 
 In order to plot the results you will need the following tools:
+
 - python3
 - python numpy
 - python pandas
 - python plotly incl. plotly-dash, plotly-io (with orca, see https://plot.ly/python/static-image-export/)
 
 This repository is structured as the following:
+
 - submodules/ensembles: This contains the actual source code for training GP, IVM, GMT and GMT-NN. I try to maintain this code independent from specific experiments / paper in its own repository (https://bitbucket.org/sbuschjaeger/ensembles/). Please make sure, that you actually clone this repository as well, e.g. by doing `git submodule update --init --recursive`
 Important: These experiments have been run with code from a different branch than master. Thus please make sure that you checkout the branch `ensembles-classification` of the ensembles project, e.g. 
 `cd submodules/ensembles && git checkout ensembles-classification` (Yes I know the name is somewhat misleading. Stuff happend and mistakes have been made.)
