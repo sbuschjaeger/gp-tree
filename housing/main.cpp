@@ -138,7 +138,7 @@ void test_model(
 
 	std::chrono::high_resolution_clock::time_point start, end;
 
-//#pragma omp parallel for
+#pragma omp parallel for
 	for (size_t i = 0; i < folds; ++i) {
 		BatchLearner<internal_t, internal_t, internal_t> *model = createModel();
 		Dataset<internal_t,internal_t,internal_t> DTrain(splits, i);
